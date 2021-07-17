@@ -22,6 +22,6 @@ class Database(object):
         return self.cur.execute(query).fetchall()
 
 
-sql = Database('database/without_name_bot.db')
+sql = Database('database/bot.db')
 
 # TODO: добавить логи выполненных коммитов и запросов

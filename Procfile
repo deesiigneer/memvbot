@@ -1,1 +1,1 @@
-web: ado start
+worker: python main.py

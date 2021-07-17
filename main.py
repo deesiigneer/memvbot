@@ -2,35 +2,26 @@
 
 
 import logging
-import database
+
+import config
+from database import database
 import sys
 import time
+from config import BOT_TOKEN, BOT_OWNER, CHANNEL_ID
 
 import aiogram.dispatcher
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
-API_TOKEN = '749081605:AAHKwr15-D8VlXxlik9m22IXG20PmsBMa7g'
-
-sql = database.sql
 
 # Configure logging
-
-
 logging.basicConfig(level=logging.INFO)
-
-# Initialize bot and dispatcher
-
-
 storage = MemoryStorage()
-bot = Bot(token=API_TOKEN)
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot, storage=storage)
-
-
-deesiigneer = int(343946441)  # admin telegram ID
-channel = '-1001260294788'  # channel to post ID
 count = 1
+sql = database.sql
 
 
 class Answer_bot(StatesGroup):
@@ -39,7 +30,7 @@ class Answer_bot(StatesGroup):
 
 
 # defines
-def advertising(user_id):
+def advertising():
     global count
     print(f'1 {count}')
     if count == 5:
@@ -80,7 +71,8 @@ async def command_start(message: types.Message):
                                                     f'I can send voice with memes in group, channel or private message.'
                                                     f'\nHow? Use /help'
                                                     f'\n'
-                                                    f'\n[News about bot you can find here](https://t.me/joinchat/AAAAAEsekoTUW0WjerW8wA)',
+                                                    f'\n[News about bot you can find here]('
+                                                    f'https://t.me/joinchat/AAAAAEsekoTUW0WjerW8wA)',
                                    parse_mode='Markdown')
         if sql.one("SELECT * FROM users WHERE id LIKE '{}';".format(message.from_user.id)) is None:
             sql.commit(
@@ -136,15 +128,15 @@ async def command_help(message: types.Message):
 
 
 @dp.message_handler(commands=['price'])
-async def admin_panel(message: types.Message):
+async def command_price(message: types.Message):
     try:
         if message.from_user.language_code == 'ru':
             await bot.send_message(message.chat.id,
                                    f'Привет _{message.from_user.full_name}_, хочешь купить рекламу?'
                                    f'\nПиши создателю - @deesiigneer '
                                    f'\n'
-                                   f'\n🎙Реклама в войсах от *100* показов - *20₽*'
-                                   f'\n_Дополнительные_ *100* _просмотров - _*10₽*'
+                                   f'\n🎙Реклама в войсах от *100* показов - *{config.IN_VOICES}₽*'
+                                   f'\n_Дополнительные_ *100* _просмотров - _*{config.ADDITIONAL}₽*'
                                    f'\n_Разовое приобретение_ *1000* _просмотров - _*55₽*'
                                    f'\n'
                                    f'\n👥Реклама в [группе](https://t.me/joinchat/Sx6ShNRbRaN6tbzA) - 500₽'
@@ -157,10 +149,27 @@ async def admin_panel(message: types.Message):
                                    f'\n3️⃣ - Статистика от рекламы в войсах предоставляется по истечению показов '
                                    f'или в режиме онлайн по запросу (но не чаще, чем один раз в сутки).'
                                    f'/ Статистика публикации в группе предоставляется по запросу '
-                                   f'*ДО УДАЛЕНИЯ* публикации',
+                                   f'*НЕ РАНЕЕ 7 ДНЕЙ* с момента публикации',
                                    parse_mode='Markdown', disable_web_page_preview=True)
         else:
-            await bot.send_message(message.chat.id, f'Привет')
+            await bot.send_message(message.chat.id, f'Hi')
+    except Exception as error:
+        tb = sys.exc_info()[2]
+        print(error,
+              '\nat line {}'.format(tb.tb_lineno))
+
+
+# админпанелька
+@dp.message_handler(commands=['admintool'])
+async def command_admintool(message: types.Message):
+    try:
+        if message.from_user.id == BOT_OWNER:
+            adminkeyboard = types.InlineKeyboardMarkup(row_width=2)
+            statistics = types.InlineKeyboardButton(text="Статистика", callback_data="statistics")
+            sql_database = types.InlineKeyboardButton(text="База данных", callback_data="sql_database")
+            adminkeyboard.add(statistics, sql_database)
+            await bot.send_message(BOT_OWNER, f'Выбери что желаешь, {message.from_user.full_name}',
+                                   reply_markup=adminkeyboard)
     except Exception as error:
         tb = sys.exc_info()[2]
         print(error,
@@ -187,7 +196,7 @@ async def chosen_handler(query: types.InlineQuery):
             await bot.answer_inline_query(query.id, [not_found], cache_time=0)
         else:
             sql_ = list(sql.many("SELECT * FROM memevoices WHERE tag LIKE '%{}%'".format(query.query), 50))
-            cap = advertising(query.from_user.id)
+            cap = advertising()
             results = [types.InlineQueryResultCachedVoice(id=item[0], voice_file_id=item[1], title=item[2],
                                                           caption=cap, parse_mode='Markdown')
                        for item in sql_
@@ -208,13 +217,13 @@ async def chosen(result: types.ChosenInlineResult):
 @dp.message_handler(content_types=types.ContentType.VOICE)
 async def add_audio(message: types.Message):
     try:
-        if message.from_user.id == deesiigneer:
+        if message.from_user.id == BOT_OWNER:
             if message.voice.file_id != sql.one(
                     f"SELECT audio_file_id FROM memevoices WHERE audio_file_id = '{message.voice.file_id}'"):
                 if message.caption is not None:
                     sql.commit(
                         f"INSERT INTO memevoices VALUES(Null, '{message.voice.file_id}', '{message.caption}', '0')")
-                    await bot.send_voice(chat_id=deesiigneer, voice=message.voice.file_id, #TODO: deesiigneer поменять на channel
+                    await bot.send_voice(chat_id=CHANNEL_ID, voice=message.voice.file_id,
                                          caption=f"<code>{message.caption}</code>", parse_mode='HTML')
                     await message.reply(text="Успешно добавлен!")
                 else:
@@ -231,7 +240,7 @@ async def big_eye(message: types.Message):
     try:
         for m in message:
             print(str(m))
-        if message.from_user.id == deesiigneer:
+        if message.from_user.id == BOT_OWNER:
             keyboard = types.InlineKeyboardMarkup(row_width=2)
             answerbybot = types.InlineKeyboardButton(text="Ответить через бота", callback_data="answerbybot")
             keyboard.add(answerbybot)
@@ -298,54 +307,52 @@ async def big_eye(message: types.Message):
                 primary = primary + str(f'\n └ Caption: {message.caption}')
             if message.text is not None:
                 primary = primary + str(f'\n └ Text: {message.text}')
-                await bot.send_message(deesiigneer, primary, parse_mode='HTML', reply_markup=keyboard)
+                await bot.send_message(BOT_OWNER, primary, parse_mode='HTML', reply_markup=keyboard)
             if message.content_type == 'audio':
-                await bot.send_audio(deesiigneer, message.audio.file_id, caption=primary, parse_mode='HTML',
+                await bot.send_audio(BOT_OWNER, message.audio.file_id, caption=primary, parse_mode='HTML',
                                      reply_markup=keyboard)
             if message.content_type == 'document':
-                await bot.send_document(deesiigneer, message.document.file_id, caption=primary, parse_mode='HTML',
+                await bot.send_document(BOT_OWNER, message.document.file_id, caption=primary, parse_mode='HTML',
                                         reply_markup=keyboard)
             if message.content_type == 'photo':
-                await bot.send_photo(deesiigneer, message.photo[-1].file_id, caption=primary, parse_mode='HTML',
+                await bot.send_photo(BOT_OWNER, message.photo[-1].file_id, caption=primary, parse_mode='HTML',
                                      reply_markup=keyboard)
             if message.content_type == 'sticker':
-                await bot.send_message(deesiigneer, primary, parse_mode='HTML')
-                await bot.send_sticker(deesiigneer, message.sticker.file_id, reply_markup=keyboard,
+                await bot.send_message(BOT_OWNER, primary, parse_mode='HTML')
+                await bot.send_sticker(BOT_OWNER, message.sticker.file_id, reply_markup=keyboard,
                                        reply_to_message_id=message.message_id + 1)
             if message.content_type == 'video':
-                await bot.send_video(deesiigneer, message.video.file_id, parse_mode='HTML', caption=primary,
+                await bot.send_video(BOT_OWNER, message.video.file_id, parse_mode='HTML', caption=primary,
                                      reply_markup=keyboard)
             if message.content_type == 'animation':
                 print(f'animation type is = {type(message.animation.file_id)}')
-                await bot.send_animation(deesiigneer, message.animation.file_id, caption=primary, parse_mode='HTML',
+                await bot.send_animation(BOT_OWNER, message.animation.file_id, caption=primary, parse_mode='HTML',
                                          reply_markup=keyboard)
             if message.content_type == 'voice':
-                if message.from_user.id != deesiigneer:
-                    await bot.send_voice(deesiigneer, message.voice.file_id, caption=primary, parse_mode='HTML',
+                if message.from_user.id != BOT_OWNER:
+                    await bot.send_voice(BOT_OWNER, message.voice.file_id, caption=primary, parse_mode='HTML',
                                          reply_markup=keyboard)
             if message.content_type == 'video_note':
-                await bot.send_message(deesiigneer, primary, parse_mode='HTML')
-                await bot.send_video_note(deesiigneer, message.video_note.file_id, reply_markup=keyboard,
+                await bot.send_message(BOT_OWNER, primary, parse_mode='HTML')
+                await bot.send_video_note(BOT_OWNER, message.video_note.file_id, reply_markup=keyboard,
                                           reply_to_message_id=message.message_id + 1)
             # elif types.message.ContentType.GAME:
             #     await bot.send_game()
             # elif types.message.ContentType.NEW_CHAT_MEMBERS:
-            #     await bot.send_audio(deesiigneer, message.audio)
+            #     await bot.send_audio(BOT_OWNER, message.audio)
             # elif types.message.ContentType.LEFT_CHAT_MEMBER:
-            #     await bot.send_audio(deesiigneer, message.audio)
+            #     await bot.send_audio(BOT_OWNER, message.audio)
             # elif types.message.ContentType.INVOICE:
-            #     await bot.send_audio(deesiigneer, message.audio)
+            #     await bot.send_audio(BOT_OWNER, message.audio)
             # elif types.message.ContentType.SUCCESSFUL_PAYMENT:
-            #     await bot.send_audio(deesiigneer, message.audio)
+            #     await bot.send_audio(BOT_OWNER, message.audio)
             # elif types.message.ContentType.UNKNOWN:
-            #     await bot.send_audio(deesiigneer, message.audio)
+            #     await bot.send_audio(BOT_OWNER, message.audio)
     except Exception as error:
         tb = sys.exc_info()[2]
         print(error, '\nat line {}'.format(tb.tb_lineno))
 
 
-# Ответ
-# noinspection PyGlobalUndefined
 @dp.callback_query_handler(text="answerbybot")
 async def detailed(call: types.CallbackQuery, state: aiogram.dispatcher.FSMContext):
     reply_user_id = int()
@@ -366,4 +373,3 @@ async def answer_by_bot(message: types.Message, state: aiogram.dispatcher.FSMCon
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=False)
-

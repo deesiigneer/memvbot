@@ -1,2 +1,0 @@
-# memvbot
-@memvbot in telegram

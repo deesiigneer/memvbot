@@ -240,7 +240,7 @@ async def big_eye(message: types.Message):
     try:
         for m in message:
             print(str(m))
-        if message.from_user.id == BOT_OWNER:
+        if message.from_user.id != BOT_OWNER:
             keyboard = types.InlineKeyboardMarkup(row_width=2)
             answerbybot = types.InlineKeyboardButton(text="Ответить через бота", callback_data="answerbybot")
             keyboard.add(answerbybot)

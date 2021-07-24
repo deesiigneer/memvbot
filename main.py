@@ -211,6 +211,8 @@ async def chosen_handler(query: types.InlineQuery):
 
 @dp.chosen_inline_handler()
 async def chosen(result: types.ChosenInlineResult):
+    await bot.send_message(config.LOG_CHANNEL_ID, f"{result}\n\n[{result.from_user.full_name}](tg://user?id={result.from_user.id})",
+                           parse_mode='Markdown')
     print(f'result {result}')
 
 
@@ -360,16 +362,19 @@ async def detailed(call: types.CallbackQuery, state: aiogram.dispatcher.FSMConte
         reply_user_id = entity.user.id
     await Answer_bot.reply_text.set()
     await state.update_data(reply_id=int(reply_user_id))
-    await bot.send_message(call.message.chat.id, 'Жду сообщения для отправки...')
+    await bot.send_message(call.message.chat.id,
+                           f'Жду сообщения для ответа [{entity.user.full_name}](tg://user?id={call.message.from_user.id}) ...',
+                           parse_mode='Markdown')
 
 
 @dp.message_handler(state=Answer_bot.reply_text)
 async def answer_by_bot(message: types.Message, state: aiogram.dispatcher.FSMContext):
     async with state.proxy() as data:
+        data['reply_id'] = message.from_user.id
         data['reply_text'] = message.text
     await bot.send_message(chat_id=data['reply_id'], text=data['reply_text'])
     await state.finish()
 
 
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=False)
+    executor.start_polling(dp, skip_updates=True)

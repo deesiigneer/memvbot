@@ -51,7 +51,7 @@ def advertising():
 def answer_404(user_id):
     answer = sql.one('SELECT text, url, count, id FROM advertising ORDER BY RANDOM() LIMIT 1')
     sql.commit(f'UPDATE users SET used="'
-               f'{int(sql.one(f"SELECT used FROM users WHERE id == {user_id}")[0]) + 1}'
+               f'{int(sql.one(f"SELECT used FROM users WHERE id = {user_id}")[0]) + 1}'
                f'" WHERE id="{user_id}"')
     sql.commit(f'UPDATE advertising SET count="{int(answer[2]) - 1}" WHERE id="{answer[3]}"')
     answer = f'[{answer[0]}]({answer[1]})'
@@ -77,7 +77,7 @@ async def command_start(message: types.Message):
                                                     f'\n[News about bot you can find here]('
                                                     f'https://t.me/joinchat/AAAAAEsekoTUW0WjerW8wA)',
                                    parse_mode='Markdown')
-        if sql.one("SELECT * FROM users WHERE id LIKE '{}';".format(message.from_user.id)) is None:
+        if sql.one("SELECT * FROM users WHERE CAST(id AS TEXT) LIKE '{}';".format(message.from_user.id)) is None:
             sql.commit(
                 "INSERT INTO users VALUES('{}','{}','{}','{}','{}','{}','{}','','','','','','','','','','','','',"
                 "'','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','',"
@@ -184,7 +184,7 @@ async def chosen_handler(query: types.InlineQuery):
     try:
         global count
         print(query)
-        if sql.one("SELECT * FROM memevoices WHERE tag LIKE '%{}%'".format(query.query)) is None:
+        if sql.one("SELECT * FROM memevoices WHERE CAST(tag AS TEXT) LIKE '%{}%'".format(query.query)) is None:
             not_found = types.InlineQueryResultArticle(id='404',
                                                        title="404",
                                                        description="Такого войса нет...",
@@ -198,7 +198,7 @@ async def chosen_handler(query: types.InlineQuery):
                                                        )
             await bot.answer_inline_query(query.id, [not_found], cache_time=0)
         else:
-            sql_ = list(sql.many("SELECT * FROM memevoices WHERE tag LIKE '%{}%'".format(query.query), 50))
+            sql_ = list(sql.many("SELECT * FROM memevoices WHERE CAST(tag AS TEXT) LIKE '%{}%'".format(query.query), 50))
             cap = advertising()
             results = [types.InlineQueryResultCachedVoice(id=item[0], voice_file_id=item[1], title=item[2],
                                                           caption=cap, parse_mode='Markdown')

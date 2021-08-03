@@ -21,7 +21,10 @@ storage = MemoryStorage()
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot, storage=storage)
 count = 1
-sql = database.sql
+sql = database.Database(user=config.PG_USER,
+                        database=config.PG_DATABASE,
+                        host=config.PG_HOST,
+                        password=config.PG_PASSWORD)
 
 
 class Answer_bot(StatesGroup):
@@ -211,7 +214,8 @@ async def chosen_handler(query: types.InlineQuery):
 
 @dp.chosen_inline_handler()
 async def chosen(result: types.ChosenInlineResult):
-    await bot.send_message(config.LOG_CHANNEL_ID, f"{result}\n\n[{result.from_user.full_name}](tg://user?id={result.from_user.id})",
+    await bot.send_message(config.LOG_CHANNEL_ID,
+                           f"{result}\n\n[{result.from_user.full_name}](tg://user?id={result.from_user.id})",
                            parse_mode='Markdown')
     print(f'result {result}')
 
@@ -224,7 +228,7 @@ async def add_audio(message: types.Message):
                     f"SELECT audio_file_id FROM memevoices WHERE audio_file_id = '{message.voice.file_id}'"):
                 if message.caption is not None:
                     sql.commit(
-                        f"INSERT INTO memevoices VALUES(Null, '{message.voice.file_id}', '{message.caption}', '0')")
+                        f"INSERT INTO memevoices VALUES(DEFAULT, '{message.voice.file_id}', '{message.caption}', '0')")
                     await bot.send_voice(chat_id=CHANNEL_ID, voice=message.voice.file_id,
                                          caption=f"<code>{message.caption}</code>", parse_mode='HTML')
                     await message.reply(text="Успешно добавлен!")
@@ -370,7 +374,6 @@ async def detailed(call: types.CallbackQuery, state: aiogram.dispatcher.FSMConte
 @dp.message_handler(state=Answer_bot.reply_text)
 async def answer_by_bot(message: types.Message, state: aiogram.dispatcher.FSMContext):
     async with state.proxy() as data:
-        data['reply_id'] = message.from_user.id
         data['reply_text'] = message.text
     await bot.send_message(chat_id=data['reply_id'], text=data['reply_text'])
     await state.finish()

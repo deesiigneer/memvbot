@@ -40,7 +40,7 @@ def advertising():
         print(f'2 {count}')
         count = 0
         caption = sql.one('SELECT text, url, count, id FROM advertising ORDER BY RANDOM() LIMIT 1')
-        sql.commit(f'UPDATE advertising SET count="{caption[2] - 1}" WHERE id="{caption[3]}"')
+        sql.commit(f"UPDATE advertising SET count='{caption[2] - 1}' WHERE id='{caption[3]}'")
         caption = f'[{caption[0]}]({caption[1]})'
     else:
         print(f'3 {count}')
@@ -53,7 +53,7 @@ def answer_404(user_id):
     sql.commit(f'UPDATE users SET used="'
                f'{int(sql.one(f"SELECT used FROM users WHERE id = {user_id}")[0]) + 1}'
                f'" WHERE id="{user_id}"')
-    sql.commit(f'UPDATE advertising SET count="{int(answer[2]) - 1}" WHERE id="{answer[3]}"')
+    sql.commit(f"UPDATE advertising SET count='{int(answer[2]) - 1}' WHERE id='{answer[3]}'")
     answer = f'[{answer[0]}]({answer[1]})'
     return answer
 

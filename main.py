@@ -223,19 +223,14 @@ async def chosen(result: types.ChosenInlineResult):
 @dp.message_handler(content_types=types.ContentType.VOICE)
 async def add_audio(message: types.Message):
     try:
+        print(message.caption)
+        print(f'msg {message}')
         if message.from_user.id == BOT_OWNER:
-            if message.voice.file_id != sql.one(
-                    f"SELECT audio_file_id FROM memevoices WHERE audio_file_id = '{message.voice.file_id}'"):
-                if message.caption is not None:
-                    sql.commit(
-                        f"INSERT INTO memevoices VALUES(DEFAULT, '{message.voice.file_id}', '{message.caption}', '0')")
-                    await bot.send_voice(chat_id=CHANNEL_ID, voice=message.voice.file_id,
-                                         caption=f"<code>{message.caption}</code>", parse_mode='HTML')
-                    await message.reply(text="Успешно добавлен!")
-                else:
-                    await message.reply(text="Войс нужно отправлять с названием!\nПопробуй ещё раз.")
+            if message.caption == sql.one(
+                    f"SELECT tag FROM memevoices WHERE tag = '{message.caption}'")[0]:
+                sql.commit(f"UPDATE memevoices SET file_unique_id = '{message.voice.file_unique_id}' WHERE tag = '{message.caption}'")
             else:
-                await message.reply(text="Этот войс уже есть в БД!")
+                await message.reply(text="tag не совпадают!")
     except Exception as error:
         tb = sys.exc_info()[2]
         print(error, '\nat line {}'.format(tb.tb_lineno))

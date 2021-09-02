@@ -198,12 +198,20 @@ async def chosen_handler(query: types.InlineQuery):
                                                        )
             await bot.answer_inline_query(query.id, [not_found], cache_time=0)
         else:
-            sql_ = list(sql.many("SELECT * FROM memevoices WHERE CAST(tag AS TEXT) LIKE '%{}%'".format(query.query), 50))
+            sql_ = list(sql.many("SELECT * FROM memevoices WHERE CAST(tag AS TEXT) LIKE '%{}%'".format(query.query),
+                                 50)
+                        )
             cap = advertising()
-            results = [types.InlineQueryResultCachedVoice(id=item[0], voice_file_id=item[1], title=item[2],
-                                                          caption=cap, parse_mode='Markdown')
-                       for item in sql_
-                       ]
+            if query.from_user.id != BOT_OWNER:
+                results = [types.InlineQueryResultCachedVoice(id=item[0], voice_file_id=item[1], title=item[2],
+                                                              caption=cap, parse_mode='Markdown')
+                           for item in sql_
+                           ]
+            else:
+                results = [types.InlineQueryResultCachedVoice(id=item[0], voice_file_id=item[1], title=item[2],
+                                                              caption=item[2], parse_mode='Markdown')
+                           for item in sql_
+                           ]
             await query.answer(results, cache_time=0, is_personal=True)
             count = count + 1
     except Exception as error:
